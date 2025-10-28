@@ -1,5 +1,9 @@
-import fs from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export default async function handler(req, res) {
   try {
@@ -12,19 +16,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Missing student_number" });
     }
 
-    const studentsPath = path.join(process.cwd(), "students.json");
-    const attendancePath = path.join(process.cwd(), "attendance_records.csv");
+    // 🔍 Find the student
+    const { data: studentData, error: studentError } = await supabase
+      .from("students")
+      .select("*")
+      .eq("student_number", student_number)
+      .single();
 
-    if (!fs.existsSync(studentsPath)) {
-      console.error("❌ students.json not found");
-      return res.status(404).json({ success: false, message: "students.json not found" });
-    }
-
-    const students = JSON.parse(fs.readFileSync(studentsPath, "utf8"));
-    const student = students[student_number];
-
-    if (!student) {
-      console.error(`⚠️ Student not found: ${student_number}`);
+    if (studentError || !studentData) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
@@ -32,29 +31,44 @@ export default async function handler(req, res) {
     const currentDate = date.toISOString().split("T")[0];
     const currentTime = date.toTimeString().split(" ")[0];
 
-    let csv = "";
-    if (fs.existsSync(attendancePath)) {
-      csv = fs.readFileSync(attendancePath, "utf8");
-    }
+    // ⛔ Prevent duplicates
+    const { data: existing, error: checkError } = await supabase
+      .from("attendance_records")
+      .select("*")
+      .eq("student_number", student_number)
+      .eq("date", currentDate)
+      .maybeSingle();
 
-    if (csv.includes(`${currentDate},${student_number}`)) {
+    if (checkError) throw checkError;
+
+    if (existing) {
       return res.status(200).json({
         success: true,
-        message: `✅ Already marked: ${student.name} (${student_number})`
+        message: `✅ Already marked: ${studentData.name} (${student_number})`
       });
     }
 
-    const newLine = `${currentDate},${currentTime},${student_number},${student.name},${student.grade_level},${student.section},Present\n`;
-    fs.appendFileSync(attendancePath, newLine);
+    // ✅ Insert new attendance record
+    const { error: insertError } = await supabase.from("attendance_records").insert([
+      {
+        date: currentDate,
+        time: currentTime,
+        student_number,
+        status: "Present"
+      }
+    ]);
 
-    console.log(`🟢 Marked present: ${student.name} (${student_number})`);
+    if (insertError) throw insertError;
 
     return res.status(200).json({
       success: true,
-      message: `🟢 Marked Present: ${student.name} (${student_number})`
+      message: `🟢 Marked Present: ${studentData.name} (${student_number})`
     });
   } catch (error) {
     console.error("❌ Server error:", error);
-    return res.status(500).json({ success: false, message: "Server error — check logs or file permissions" });
+    return res.status(500).json({
+      success: false,
+      message: "Server error — check Supabase config or logs"
+    });
   }
 }
