@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📷 QR Attendance Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+      }
+
+      h2 {
+        margin-top: 30px;
+      }
+
+      #reader {
+        width: 300px;
+        margin: 30px auto;
+      }
+
+      #message {
+        font-size: 18px;
+        margin-top: 20px;
+        color: #333;
+      }
+
+      .success {
+        color: green;
+      }
+
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>📷 QR Attendance Scanner</h2>
+    <div id="reader"></div>
+    <div id="message">Scan a student QR code...</div>
+
+    <!-- Link to your JS file -->
+    <script src="script.js"></script>
+  </body>
+</html>

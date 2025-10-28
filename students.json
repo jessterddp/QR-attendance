@@ -1,0 +1,27 @@
+{
+  "2024001": {
+    "name": "John Smith",
+    "grade_level": "Grade 10",
+    "section": "A"
+  },
+  "2024002": {
+    "name": "Emma Johnson",
+    "grade_level": "Grade 10",
+    "section": "A"
+  },
+  "2024003": {
+    "name": "Michael Brown",
+    "grade_level": "Grade 11",
+    "section": "B"
+  },
+  "2024004": {
+    "name": "Sophia Davis",
+    "grade_level": "Grade 11",
+    "section": "B"
+  },
+  "2024005": {
+    "name": "William Wilson",
+    "grade_level": "Grade 12",
+    "section": "C"
+  }
+}
