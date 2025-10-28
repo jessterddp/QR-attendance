@@ -4,6 +4,9 @@ let students = {}; // local cache of students
 async function loadStudents(filterText = "") {
   try {
     const { data, error } = await supabase.from('students').select('*');
+    console.log("Data:", data);
+    console.log("Error:", error);
+
     if (error) throw error;
 
     students = {};
