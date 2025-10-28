@@ -1,8 +1,5 @@
 {
-  "name": "qr-attendance",
-  "version": "1.0.0",
-  "description": "QR attendance tracker with Vercel serverless function",
-  "main": "index.js",
-  "type": "module",
-  "license": "MIT"
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1"
+  }
 }

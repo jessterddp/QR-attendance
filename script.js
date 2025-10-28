@@ -11,9 +11,12 @@ async function onScanSuccess(qrCodeMessage) {
   try {
     const res = await fetch("/api/attendance", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ student_number: qrCodeMessage }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ student_number }),
     });
+
 
     const data = await res.json();
     if (data.success) {
