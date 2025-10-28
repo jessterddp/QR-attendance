@@ -28,21 +28,16 @@ async function loadStudents() {
 
 // ------------------- Generate QR canvas -------------------
 function generateQRCanvas(text) {
-  const canvas = document.createElement('canvas');
-  const size = 300;
-  canvas.width = size;
-  canvas.height = size;
-
-  new QRCode(canvas, {
+  const container = document.createElement('div');
+  new QRCode(container, {
     text: text,
-    width: size,
-    height: size,
+    width: 300,
+    height: 300,
     colorDark: "#000000",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
-
-  return canvas;
+  return container;
 }
 
 // ------------------- Create QR card -------------------
@@ -53,10 +48,9 @@ function createQRCard(studentNumber, student) {
   const canvasContainer = document.createElement('div');
   canvasContainer.className = 'qr-canvas-container';
 
-  const canvas = generateQRCanvas(studentNumber);
-  canvasContainer.appendChild(canvas);
-
-  qrCodes[studentNumber] = canvas;
+  const qrElement = generateQRCanvas(studentNumber);
+  canvasContainer.appendChild(qrElement);
+  qrCodes[studentNumber] = qrElement;
 
   const info = document.createElement('div');
   info.className = 'qr-info';
@@ -66,15 +60,8 @@ function createQRCard(studentNumber, student) {
     <div class="student-number">${studentNumber}</div>
   `;
 
-  const downloadBtn = document.createElement('button');
-  downloadBtn.className = 'btn btn-small';
-  downloadBtn.textContent = '📥 Download';
-  downloadBtn.onclick = () => downloadQRCode(studentNumber, student);
-
   card.appendChild(canvasContainer);
   card.appendChild(info);
-  card.appendChild(downloadBtn);
-
   return card;
 }
 
@@ -88,7 +75,7 @@ function renderQRCodes() {
   const sectionFilter = document.getElementById('sectionFilter').value;
 
   const filtered = Object.entries(students).filter(([id, student]) => {
-    const gradeMatch = !gradeFilter || student.grade_level.toString() === gradeFilter.replace("Grade ", "");
+    const gradeMatch = !gradeFilter || student.grade_level.toString() === gradeFilter;
     const sectionMatch = !sectionFilter || student.section === sectionFilter;
     return gradeMatch && sectionMatch;
   });
@@ -101,39 +88,6 @@ function renderQRCodes() {
   filtered.forEach(([id, student]) => {
     const card = createQRCard(id, student);
     grid.appendChild(card);
-  });
-}
-
-// ------------------- Download single QR code -------------------
-function downloadQRCode(studentNumber, student) {
-  const canvas = qrCodes[studentNumber];
-
-  const finalCanvas = document.createElement('canvas');
-  const ctx = finalCanvas.getContext('2d');
-
-  finalCanvas.width = 400;
-  finalCanvas.height = 480;
-
-  ctx.fillStyle = 'white';
-  ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-  ctx.drawImage(canvas, 50, 20, 300, 300);
-
-  ctx.fillStyle = 'black';
-  ctx.font = 'bold 20px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(student.name, 200, 350);
-
-  ctx.font = '16px Arial';
-  ctx.fillText(`${student.grade_level} - ${student.section}`, 200, 380);
-  ctx.fillText(studentNumber, 200, 410);
-
-  finalCanvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${student.name.replace(/\s+/g, '_')}_${studentNumber}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
   });
 }
 
