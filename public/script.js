@@ -11,14 +11,15 @@ const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
 const scanStatus = document.getElementById("scanStatus");
 
-// ------------------- Local State -------------------
+// ------------------- Local Cache -------------------
 let students = [];
 let attendanceRecords = [];
 let scanLock = {};
 
+// Set default date to today
 dateInput.value = new Date().toISOString().split("T")[0];
 
-// ------------------- Show Scan Status -------------------
+// ------------------- Scan Status -------------------
 function showScanStatus(message, type = "info") {
   scanStatus.textContent = message;
   scanStatus.className = `scan-status ${type}`;
@@ -29,26 +30,28 @@ function showScanStatus(message, type = "info") {
   }, 3000);
 }
 
-// ------------------- Load Students from Supabase -------------------
+// ------------------- Load Students -------------------
 async function loadStudents() {
   try {
     const { data, error } = await supabase.from('students').select('*');
     if (error) throw error;
 
-    students = data; // Array of student objects
+    students = data;
     renderTable();
   } catch (err) {
     console.error("Failed to load students:", err);
+    showScanStatus("❌ Failed to load students", "error");
   }
 }
 
-// ------------------- Load Attendance Records -------------------
+// ------------------- Load Attendance -------------------
 async function loadAttendance() {
   try {
+    const selectedDate = dateInput.value;
     const { data, error } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('date', dateInput.value);
+      .from("attendance_records")
+      .select("*")
+      .eq("date", selectedDate);
 
     if (error) throw error;
 
@@ -57,37 +60,37 @@ async function loadAttendance() {
     updateStats();
   } catch (err) {
     console.error("Error loading attendance:", err);
+    showScanStatus("❌ Failed to load attendance", "error");
   }
 }
 
-// ------------------- Update Statistics -------------------
+// ------------------- Update Stats -------------------
 function updateStats() {
   const section = sectionSelect.value;
   const filteredStudents = section 
     ? students.filter(s => s.section === section)
     : students;
-  
-  const presentCount = filteredStudents.filter(s => 
+
+  const presentCount = filteredStudents.filter(s =>
     attendanceRecords.some(r => r.student_number === s.student_number)
   ).length;
-  
+
   const totalCount = filteredStudents.length;
   const absentCount = totalCount - presentCount;
-  
+
   document.getElementById("presentCount").textContent = presentCount;
   document.getElementById("absentCount").textContent = absentCount;
   document.getElementById("totalCount").textContent = totalCount;
 }
 
-// ------------------- Render Attendance Table -------------------
+// ------------------- Render Table -------------------
 function renderTable() {
   const section = sectionSelect.value;
   tbody.innerHTML = "";
 
-  let filteredStudents = students;
-  if (section) {
-    filteredStudents = students.filter(s => s.section === section);
-  }
+  let filteredStudents = section 
+    ? students.filter(s => s.section === section)
+    : students;
 
   if (filteredStudents.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No students found</td></tr>';
@@ -105,55 +108,66 @@ function renderTable() {
     `;
     tbody.appendChild(tr);
   });
-  
+
   updateStats();
 }
 
-// ------------------- Record attendance via Supabase -------------------
-async function recordAttendance(student_number) {
+// ------------------- Record Attendance -------------------
+async function recordAttendance(studentNumber) {
+  if (scanLock[studentNumber]) return;
+  scanLock[studentNumber] = true;
+
   try {
-    const today = new Date().toISOString().split("T")[0]; // e.g., "2025-10-29"
-    
+    const student = students.find(s => s.student_number.toString() === studentNumber.toString());
+    if (!student) {
+      showScanStatus(`❌ Student not found: ${studentNumber}`, "error");
+      return;
+    }
+
+    const now = new Date();
+    const date = now.toISOString().split("T")[0];       // YYYY-MM-DD
+    const time = now.toTimeString().split(" ")[0];      // HH:MM:SS
+
     const { data, error } = await supabase
-      .from("attendance")
-      .insert([{ student_number: parseInt(student_number), date: today }]);
-    
+      .from("attendance_records")
+      .insert([{
+        student_number: parseInt(student.student_number),
+        student_name: student.name,
+        grade_level: parseInt(student.grade_level),
+        section: student.section,
+        status: "Present",
+        date,
+        time
+      }]);
+
     if (error) throw error;
-    
-    showScanStatus(`✅ Attendance recorded for ${student_number}`, "success");
-    await loadAttendance(); // refresh table
+
+    showScanStatus(`✅ Attendance recorded for ${student.name}`, "success");
+    await loadAttendance();
+
   } catch (err) {
-    console.error("Error saving attendance:", err);
+    console.error("Failed to record attendance:", err);
     showScanStatus("❌ Failed to record attendance", "error");
+  } finally {
+    setTimeout(() => scanLock[studentNumber] = false, 2000);
   }
 }
 
-
-async function onScanSuccess(decodedText) {
-  const student_number = decodedText.trim();
-  
-  if (scanLock[student_number]) return;
-  scanLock[student_number] = true;
-
-  await recordAttendance(student_number);
-
-  setTimeout(() => {
-    scanLock[student_number] = false;
-  }, 2000);
-}
-
-
-// ------------------- Initialize QR Scanner -------------------
+// ------------------- QR Scanner -------------------
 function initScanner() {
   const html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    onScanSuccess,
-    (error) => { /* ignore scan errors silently */ }
+    (decodedText) => {
+      recordAttendance(decodedText.trim());
+    },
+    (error) => {
+      // Silent scanning error
+    }
   ).catch(err => {
     console.error("Camera error:", err);
-    document.getElementById("reader").innerHTML = 
+    document.getElementById("reader").innerHTML =
       '<p style="color: red; padding: 20px;">❌ Unable to access camera. Please grant camera permissions.</p>';
   });
 }
