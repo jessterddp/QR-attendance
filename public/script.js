@@ -109,34 +109,39 @@ function renderTable() {
   updateStats();
 }
 
-// ------------------- Record Attendance -------------------
+// ------------------- Record attendance via Supabase -------------------
 async function recordAttendance(student_number) {
-  if (scanLock[student_number]) return;
-  scanLock[student_number] = true;
-
   try {
-    // Insert attendance record
-    const { data, error } = await supabase.from('attendance').insert([
-      { student_number, date: dateInput.value }
-    ]);
-
+    const today = new Date().toISOString().split("T")[0]; // e.g., "2025-10-29"
+    
+    const { data, error } = await supabase
+      .from("attendance")
+      .insert([{ student_number: parseInt(student_number), date: today }]);
+    
     if (error) throw error;
-
+    
     showScanStatus(`✅ Attendance recorded for ${student_number}`, "success");
-    await loadAttendance();
+    await loadAttendance(); // refresh table
   } catch (err) {
     console.error("Error saving attendance:", err);
     showScanStatus("❌ Failed to record attendance", "error");
-  } finally {
-    setTimeout(() => { scanLock[student_number] = false; }, 2000);
   }
 }
 
-// ------------------- QR Scan Success -------------------
+
 async function onScanSuccess(decodedText) {
   const student_number = decodedText.trim();
+  
+  if (scanLock[student_number]) return;
+  scanLock[student_number] = true;
+
   await recordAttendance(student_number);
+
+  setTimeout(() => {
+    scanLock[student_number] = false;
+  }, 2000);
 }
+
 
 // ------------------- Initialize QR Scanner -------------------
 function initScanner() {
