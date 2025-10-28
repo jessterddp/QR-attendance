@@ -76,21 +76,21 @@ async function onScanSuccess(decodedText) {
     });
 
     const text = await res.text();
-    console.log("Raw scan response:", text);
+    console.log("RAW response from server:", text);
 
     let data;
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Failed to parse JSON:", err);
-      alert("❌ Server returned invalid JSON");
+      console.error("Invalid JSON:", err);
+      alert("❌ Server returned invalid JSON. Check console logs.");
       return;
     }
 
     alert(data.message || "No message returned");
     await loadAttendance();
   } catch (err) {
-    console.error("Error saving attendance:", err);
+    console.error("Fetch error:", err);
     alert("❌ Could not connect to server");
   } finally {
     setTimeout(() => { scanLock[student_number] = false; }, 1000); // unlock after 1 second
