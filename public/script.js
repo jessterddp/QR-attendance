@@ -1,3 +1,10 @@
+// ------------------- Supabase Client -------------------
+import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+
+const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
+const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const dateInput = document.getElementById("date");
 const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
