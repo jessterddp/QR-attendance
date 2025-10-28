@@ -119,19 +119,13 @@
     </div>
   </div>
   <!-- QRCode library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script type="module">
+    import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
 
-  <!-- Supabase library -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.10.2/dist/supabase.min.js"></script>
-  <script>
-    console.log("Supabase global object:", window.Supabase);
+    const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     </script>
-  <!-- Initialize Supabase -->
-  <script>
-      const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
-      const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
-      const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  </script>
 
   <!-- Your custom JS -->
   <script src="students-manager.js" defer></script>
