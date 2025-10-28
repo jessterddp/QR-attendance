@@ -1,10 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
-
-const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
-const SUPABASE_KEY = "YOUR_ANON_KEY";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const reader = document.getElementById("reader");
 const dateInput = document.getElementById("date");
 const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
@@ -13,8 +6,9 @@ dateInput.value = new Date().toISOString().split("T")[0];
 
 let students = [];
 let attendanceRecords = [];
+let scanLock = {}; // prevent multiple scans per student
 
-// ✅ Fetch student list
+// Load students.json
 async function loadStudents() {
   const res = await fetch("students.json");
   const data = await res.json();
@@ -25,17 +19,19 @@ async function loadStudents() {
   renderTable();
 }
 
-// ✅ Fetch attendance records for current date
+// Load today's attendance from your working Supabase backend
 async function loadAttendance() {
-  const { data, error } = await supabase
-    .from("attendance_records")
-    .select("*")
-    .eq("date", dateInput.value);
-  attendanceRecords = data || [];
-  renderTable();
+  try {
+    const res = await fetch("/api/attendance?date=" + dateInput.value);
+    const data = await res.json();
+    attendanceRecords = data.records || [];
+    renderTable();
+  } catch (err) {
+    console.error("Error loading attendance:", err);
+  }
 }
 
-// ✅ Render student table
+// Render table based on selected section
 function renderTable() {
   const section = sectionSelect.value;
   const filteredStudents = students.filter((s) => s.section === section);
@@ -59,44 +55,34 @@ function renderTable() {
   });
 }
 
-// ✅ Handle QR scan
+// Handle QR scan
 async function onScanSuccess(decodedText) {
   const student_number = decodedText.trim();
-  const today = dateInput.value;
+  if (scanLock[student_number]) return; // ignore repeated scans
+  scanLock[student_number] = true;
 
-  const existing = attendanceRecords.find(
-    (r) => r.student_number === student_number && r.date === today
-  );
-  if (existing) {
-    alert("Already marked present today!");
-    return;
-  }
+  try {
+    const res = await fetch("/api/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_number }),
+    });
 
-  const student = students.find((s) => s.student_number === student_number);
-  if (!student) {
-    alert("Student not found!");
-    return;
-  }
-
-  const { error } = await supabase.from("attendance_records").insert([
-    {
-      student_number,
-      name: student.name,
-      section: student.section,
-      date: today,
-    },
-  ]);
-
-  if (error) {
-    alert("Error saving attendance");
-    console.error(error);
-  } else {
-    alert(`${student.name} marked present!`);
-    loadAttendance();
+    const data = await res.json();
+    alert(data.message);
+    await loadAttendance();
+  } catch (err) {
+    console.error("Error saving attendance:", err);
+    alert("❌ Error connecting to server");
+  } finally {
+    // Release lock after 1 second
+    setTimeout(() => {
+      scanLock[student_number] = false;
+    }, 1000);
   }
 }
 
-// ✅ Initialize camera
+// Initialize camera
 function initScanner() {
   const html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
@@ -108,11 +94,11 @@ function initScanner() {
   );
 }
 
-// ✅ Event listeners
+// Event listeners
 dateInput.addEventListener("change", loadAttendance);
 sectionSelect.addEventListener("change", renderTable);
 
-// ✅ Initialize everything
+// Initialize
 loadStudents().then(() => {
   loadAttendance();
   initScanner();
