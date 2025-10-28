@@ -1,12 +1,17 @@
-let students = {}; // local cache of students
+// ------------------- Supabase Client -------------------
+import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+
+const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
+const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ------------------- Local Cache -------------------
+let students = {};
 
 // ------------------- Load Students -------------------
 async function loadStudents(filterText = "") {
   try {
     const { data, error } = await supabase.from('students').select('*');
-    console.log("Data:", data);
-    console.log("Error:", error);
-
     if (error) throw error;
 
     students = {};
@@ -27,7 +32,7 @@ function renderTable(filterText = "") {
 
   const filtered = Object.entries(students).filter(([id, student]) => {
     const searchTerm = filterText.toLowerCase();
-    return id.toLowerCase().includes(searchTerm) || student.name.toLowerCase().includes(searchTerm);
+    return id.toString().includes(searchTerm) || student.name.toLowerCase().includes(searchTerm);
   });
 
   if (filtered.length === 0) {
@@ -43,8 +48,8 @@ function renderTable(filterText = "") {
       <td>${student.grade_level}</td>
       <td>${student.section}</td>
       <td class="action-buttons">
-        <button class="btn-edit" onclick="editStudent('${id}')">✏️ Edit</button>
-        <button class="btn-delete" onclick="deleteStudent('${id}')">🗑️ Delete</button>
+        <button class="btn-edit" onclick="editStudent(${id})">✏️ Edit</button>
+        <button class="btn-delete" onclick="deleteStudent(${id})">🗑️ Delete</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -62,29 +67,27 @@ document.getElementById("addStudentForm").addEventListener("submit", async (e) =
     section: document.getElementById("section").value
   };
 
-
   try {
     const { data, error } = await supabase.from('students').insert([studentData]);
     if (error) throw error;
 
-    alert("✅ Student added successfully!");
     students[studentData.student_number] = studentData;
     renderTable();
     e.target.reset();
   } catch (err) {
-    alert("❌ Error: " + err.message);
+    alert("❌ Error adding student: " + err.message);
   }
 });
 
 // ------------------- Edit Student -------------------
-function editStudent(studentNumber) {
+window.editStudent = function(studentNumber) {
   const student = students[studentNumber];
   document.getElementById("edit_student_number").value = studentNumber;
   document.getElementById("edit_name").value = student.name;
   document.getElementById("edit_grade_level").value = student.grade_level;
   document.getElementById("edit_section").value = student.section;
   document.getElementById("editModal").style.display = "block";
-}
+};
 
 // ------------------- Update Student -------------------
 document.getElementById("editStudentForm").addEventListener("submit", async (e) => {
@@ -104,17 +107,16 @@ document.getElementById("editStudentForm").addEventListener("submit", async (e) 
       .eq('student_number', studentNumber);
     if (error) throw error;
 
-    alert("✅ Student updated successfully!");
     students[studentNumber] = { student_number: studentNumber, ...studentData };
     renderTable();
     document.getElementById("editModal").style.display = "none";
   } catch (err) {
-    alert("❌ Error: " + err.message);
+    alert("❌ Error updating student: " + err.message);
   }
 });
 
 // ------------------- Delete Student -------------------
-async function deleteStudent(studentNumber) {
+window.deleteStudent = async function(studentNumber) {
   if (!confirm(`Are you sure you want to delete ${students[studentNumber].name}?`)) return;
 
   try {
@@ -124,13 +126,12 @@ async function deleteStudent(studentNumber) {
       .eq('student_number', studentNumber);
     if (error) throw error;
 
-    alert("✅ Student deleted successfully!");
     delete students[studentNumber];
     renderTable();
   } catch (err) {
-    alert("❌ Error: " + err.message);
+    alert("❌ Error deleting student: " + err.message);
   }
-}
+};
 
 // ------------------- Search -------------------
 document.getElementById("searchInput").addEventListener("input", (e) => {
