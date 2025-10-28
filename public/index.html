@@ -1,10 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>📷 QR Attendance Scanner</title>
+    <title>QR Attendance Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+      }
+      #reader {
+        width: 300px;
+        margin: 30px auto;
+      }
+      #message {
+        font-size: 16px;
+        margin-top: 20px;
+        color: #333;
+        white-space: pre-line; /* allows multiline logs */
+      }
+      .success { color: green; }
+      .error { color: red; }
+    </style>
+  </head>
+  <body>
+    <h2>📷 QR Attendance Scanner</h2>
+    <div id="reader"></div>
+    <div id="message">Scan a student QR code...</div>
+
     <script>
       const messageDiv = document.getElementById("message");
 
@@ -23,63 +48,37 @@
             body: JSON.stringify({ student_number: qrCodeMessage }),
           });
 
-          // Debug info (show response status)
-          showMessage(`Server responded with status: ${response.status}`, true);
+          showMessage(`Status: ${response.status}`, true);
 
-          // Try to parse the JSON
           const data = await response.json();
-
-          // Log the full JSON to the page for debugging
           showMessage(
-            `✅ Response JSON: ${JSON.stringify(data)}`,
+            `Status: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`,
             data.success
           );
         } catch (error) {
           console.error(error);
-          showMessage(`❌ Fetch failed: ${error.message}`, false);
+          showMessage(`❌ Fetch failed:\n${error.message}`, false);
         }
       }
 
-      // Initialize the QR reader
+      function onScanError(errorMessage) {
+        // This just prevents the camera from crashing silently
+        console.warn("QR scan error:", errorMessage);
+      }
+
+      // ✅ Start the camera safely
       const html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        onScanSuccess
-      );
+
+      html5QrCode
+        .start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 250 },
+          onScanSuccess,
+          onScanError
+        )
+        .catch(err => {
+          showMessage(`❌ Camera start failed:\n${err.message}`, false);
+        });
     </script>
-    <script src="script.js" defer></script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #f2f2f2;
-        margin: 0;
-        padding: 0;
-        text-align: center;
-      }
-      h2 {
-        margin-top: 30px;
-      }
-      #reader {
-        width: 300px;
-        margin: 30px auto;
-      }
-      #message {
-        font-size: 18px;
-        margin-top: 20px;
-        color: #333;
-      }
-      .success {
-        color: green;
-      }
-      .error {
-        color: red;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>📷 QR Attendance Scanner</h2>
-    <div id="reader"></div>
-    <div id="message">Scan a student QR code...</div>
   </body>
 </html>
