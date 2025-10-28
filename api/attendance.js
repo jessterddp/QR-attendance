@@ -1,69 +1,60 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+import fs from "fs";
+import path from "path";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ success: false, message: "Method not allowed" });
-  }
-
   try {
-    const { student_number } = req.body;
-    if (!student_number)
+    if (req.method !== "POST") {
+      return res.status(405).json({ success: false, message: "Method not allowed" });
+    }
+
+    const { student_number } = req.body || {};
+    if (!student_number) {
       return res.status(400).json({ success: false, message: "Missing student_number" });
+    }
 
-    // Load local students.json
-    const students = await import("../../students.json", { assert: { type: "json" } });
-    const student = students.default[student_number];
-    if (!student)
+    const studentsPath = path.join(process.cwd(), "students.json");
+    const attendancePath = path.join(process.cwd(), "attendance_records.csv");
+
+    if (!fs.existsSync(studentsPath)) {
+      console.error("❌ students.json not found");
+      return res.status(404).json({ success: false, message: "students.json not found" });
+    }
+
+    const students = JSON.parse(fs.readFileSync(studentsPath, "utf8"));
+    const student = students[student_number];
+
+    if (!student) {
+      console.error(`⚠️ Student not found: ${student_number}`);
       return res.status(404).json({ success: false, message: "Student not found" });
+    }
 
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-    const currentTime = now.toTimeString().split(" ")[0];
+    const date = new Date();
+    const currentDate = date.toISOString().split("T")[0];
+    const currentTime = date.toTimeString().split(" ")[0];
 
-    // Check if already marked today
-    const { data: existing, error: fetchError } = await supabase
-      .from("attendance_records")
-      .select("*")
-      .eq("date", currentDate)
-      .eq("student_number", student_number);
+    let csv = "";
+    if (fs.existsSync(attendancePath)) {
+      csv = fs.readFileSync(attendancePath, "utf8");
+    }
 
-    if (fetchError) throw fetchError;
-    if (existing.length > 0) {
+    if (csv.includes(`${currentDate},${student_number}`)) {
       return res.status(200).json({
         success: true,
-        message: `✅ Already marked: ${student.name} (${student_number})`,
+        message: `✅ Already marked: ${student.name} (${student_number})`
       });
     }
 
-    // Insert new record
-    const { error: insertError } = await supabase.from("attendance_records").insert([
-      {
-        date: currentDate,
-        time: currentTime,
-        student_number,
-        student_name: student.name,
-        grade_level: student.grade_level,
-        section: student.section,
-        status: "Present",
-      },
-    ]);
+    const newLine = `${currentDate},${currentTime},${student_number},${student.name},${student.grade_level},${student.section},Present\n`;
+    fs.appendFileSync(attendancePath, newLine);
 
-    if (insertError) throw insertError;
+    console.log(`🟢 Marked present: ${student.name} (${student_number})`);
 
     return res.status(200).json({
       success: true,
-      message: `🟢 Marked Present: ${student.name} (${student_number})`,
+      message: `🟢 Marked Present: ${student.name} (${student_number})`
     });
-  } catch (err) {
-    console.error("Error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error — unable to save attendance",
-    });
+  } catch (error) {
+    console.error("❌ Server error:", error);
+    return res.status(500).json({ success: false, message: "Server error — check logs or file permissions" });
   }
 }
