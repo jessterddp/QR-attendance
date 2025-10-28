@@ -1,94 +1,79 @@
+import fs from "fs";
+import path from "path";
 import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, message: "Method not allowed" });
+  }
+
   try {
-    res.setHeader("Content-Type", "application/json");
+    const { student_number } = req.body;
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      return res.status(500).json({
-        success: false,
-        message: "Missing Supabase environment variables",
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    if (req.method !== "POST") {
-      return res.status(405).json({ success: false, message: "Method not allowed" });
-    }
-
-    let body = req.body;
-    if (typeof body === "string") {
-      try {
-        body = JSON.parse(body);
-      } catch {
-        return res.status(400).json({ success: false, message: "Invalid JSON body" });
-      }
-    }
-
-    const { student_number } = body || {};
     if (!student_number) {
       return res.status(400).json({ success: false, message: "Missing student_number" });
     }
 
-    const { data: student, error: findError } = await supabase
-      .from("students")
-      .select("*")
-      .eq("student_number", student_number)
-      .single();
+    // ✅ 1. Load student info from local students.json
+    const studentsPath = path.join(process.cwd(), "students.json");
+    if (!fs.existsSync(studentsPath)) {
+      return res.status(404).json({ success: false, message: "students.json not found" });
+    }
 
-    if (findError || !student) {
+    const students = JSON.parse(fs.readFileSync(studentsPath, "utf8"));
+    const student = students[student_number];
+
+    if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
-    const date = new Date().toISOString().split("T")[0];
-    const time = new Date().toTimeString().split(" ")[0];
+    // ✅ 2. Prepare date and time
+    const date = new Date();
+    const currentDate = date.toISOString().split("T")[0];
+    const currentTime = date.toTimeString().split(" ")[0];
 
-    const { data: existing, error: checkError } = await supabase
+    // ✅ 3. Check if student already marked in Supabase
+    const { data: existing, error: existingError } = await supabase
       .from("attendance_records")
       .select("*")
       .eq("student_number", student_number)
-      .eq("date", date)
-      .maybeSingle();
+      .eq("date", currentDate);
 
-    if (checkError) {
-      return res.status(500).json({ success: false, message: "Error checking attendance" });
-    }
+    if (existingError) throw existingError;
 
-    if (existing) {
+    if (existing && existing.length > 0) {
       return res.status(200).json({
         success: true,
-        message: `${student.name} already marked present today.`,
+        message: `✅ Already marked: ${student.name} (${student_number})`
       });
     }
 
+    // ✅ 4. Insert attendance record in Supabase
     const { error: insertError } = await supabase.from("attendance_records").insert([
       {
-        date,
-        time,
-        student_number,
-        status: "Present",
-      },
+        date: currentDate,
+        time: currentTime,
+        student_number: student_number,
+        student_name: student.name,
+        grade_level: student.grade_level,
+        section: student.section,
+        status: "Present"
+      }
     ]);
 
-    if (insertError) {
-      return res.status(500).json({ success: false, message: "Failed to insert attendance" });
-    }
+    if (insertError) throw insertError;
 
     return res.status(200).json({
       success: true,
-      message: `Marked present: ${student.name}`,
+      message: `🟢 Marked Present: ${student.name} (${student_number})`
     });
   } catch (err) {
-    console.error("Unhandled error:", err);
-    try {
-      res.status(500).json({ success: false, message: "Server error", error: err.message });
-    } catch {
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ success: false, message: "Server error (fallback)" }));
-    }
+    console.error("Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error — check logs or file permissions"
+    });
   }
 }
