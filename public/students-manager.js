@@ -56,11 +56,12 @@ document.getElementById("addStudentForm").addEventListener("submit", async (e) =
   e.preventDefault();
 
   const studentData = {
-    student_number: document.getElementById("student_number").value.trim(),
+    student_number: parseInt(document.getElementById("student_number").value.trim(), 10),
     name: document.getElementById("name").value.trim(),
-    grade_level: document.getElementById("grade_level").value,
+    grade_level: parseInt(document.getElementById("grade_level").value, 10),
     section: document.getElementById("section").value
   };
+
 
   try {
     const { data, error } = await supabase.from('students').insert([studentData]);
@@ -89,10 +90,10 @@ function editStudent(studentNumber) {
 document.getElementById("editStudentForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const studentNumber = document.getElementById("edit_student_number").value;
+  const studentNumber = parseInt(document.getElementById("edit_student_number").value, 10);
   const studentData = {
     name: document.getElementById("edit_name").value.trim(),
-    grade_level: document.getElementById("edit_grade_level").value,
+    grade_level: parseInt(document.getElementById("edit_grade_level").value, 10),
     section: document.getElementById("edit_section").value
   };
 
