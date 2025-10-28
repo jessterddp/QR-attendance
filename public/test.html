@@ -9,27 +9,20 @@
 <h1>Supabase Test</h1>
 
 <script type="module">
-  // Import Supabase v2 module from CDN
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js';
+  import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
 
-  // Initialize your Supabase client
   const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
   const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   console.log("Supabase client:", supabase);
 
-  // Test: fetch all rows from "students" table
   async function testFetch() {
-    try {
-      const { data, error } = await supabase.from('students').select('*');
-      if (error) throw error;
-
+    const { data, error } = await supabase.from('students').select('*');
+    if (error) {
+      console.error("Error:", error);
+    } else {
       console.log("Students data:", data);
-      document.body.insertAdjacentHTML('beforeend', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
-    } catch (err) {
-      console.error("Error fetching students:", err);
-      alert("Error fetching students: " + err.message);
     }
   }
 
