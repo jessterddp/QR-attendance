@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generate QR Codes</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back-btn">← Back to Dashboard</a>
+    <h1>📱 Generate QR Codes</h1>
+  </div>
+
+  <div class="container">
+    <div class="qr-controls">
+      <div class="form-group">
+        <label for="gradeFilter">Filter by Grade:</label>
+        <select id="gradeFilter">
+          <option value="">All Grades</option>
+          <option value="Grade 7">Grade 7</option>
+          <option value="Grade 8">Grade 8</option>
+          <option value="Grade 9">Grade 9</option>
+          <option value="Grade 10">Grade 10</option>
+          <option value="Grade 11">Grade 11</option>
+          <option value="Grade 12">Grade 12</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="sectionFilter">Filter by Section:</label>
+        <select id="sectionFilter">
+          <option value="">All Sections</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+          <option value="E">E</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="downloadAllQRCodes()">📥 Download All as ZIP</button>
+    </div>
+
+    <div id="qrGrid" class="qr-grid"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="qr-generator.js"></script>
+</body>
+</html>

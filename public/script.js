@@ -1,82 +1,115 @@
 const dateInput = document.getElementById("date");
 const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
-const logDiv = document.getElementById("log");
+const scanStatus = document.getElementById("scanStatus");
 
 let students = [];
 let attendanceRecords = [];
-let scanLock = {}; // prevent repeated scans per student
+let scanLock = {};
 
 dateInput.value = new Date().toISOString().split("T")[0];
 
-function appendLog(message, type = "info") {
-  const p = document.createElement("p");
-  p.textContent = message;
-  p.style.color = type === "error" ? "red" : type === "success" ? "green" : "black";
-  logDiv.appendChild(p);
-  logDiv.scrollTop = logDiv.scrollHeight;
+// Show scan status
+function showScanStatus(message, type = "info") {
+  scanStatus.textContent = message;
+  scanStatus.className = `scan-status ${type}`;
+  scanStatus.style.display = "block";
+  
+  setTimeout(() => {
+    scanStatus.style.display = "none";
+  }, 3000);
 }
 
-// Load students.json
+// Load students
 async function loadStudents() {
   try {
-    const res = await fetch("students.json");
+    const res = await fetch(`${window.location.origin}/api/students`);
     const data = await res.json();
-    students = Object.keys(data).map(id => ({ student_number: id, ...data[id] }));
-    appendLog("✅ Loaded students.json", "success");
-    renderTable();
+    if (data.success) {
+      students = Object.keys(data.students).map(id => ({ 
+        student_number: id, 
+        ...data.students[id] 
+      }));
+      renderTable();
+    }
   } catch (err) {
-    appendLog("❌ Failed to load students.json: " + err, "error");
+    console.error("Failed to load students:", err);
   }
 }
 
-// Load today's attendance
+// Load attendance records
 async function loadAttendance() {
   try {
     const apiUrl = `${window.location.origin}/api/attendance?date=${dateInput.value}`;
     const res = await fetch(apiUrl);
-    const text = await res.text();
-    appendLog("RAW attendance fetch response: " + text);
+    const data = await res.json();
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (err) {
-      appendLog("❌ Invalid JSON from /api/attendance: " + err, "error");
-      return;
+    if (data.success) {
+      attendanceRecords = data.records || [];
+      renderTable();
+      updateStats();
     }
-
-    attendanceRecords = data.records || [];
-    renderTable();
   } catch (err) {
-    appendLog("❌ Error loading attendance: " + err, "error");
+    console.error("Error loading attendance:", err);
   }
 }
 
-// Render table
+// Update statistics
+function updateStats() {
+  const section = sectionSelect.value;
+  const filteredStudents = section 
+    ? students.filter(s => s.section === section)
+    : students;
+  
+  const presentCount = filteredStudents.filter(s => 
+    attendanceRecords.some(r => r.student_number === s.student_number)
+  ).length;
+  
+  const totalCount = filteredStudents.length;
+  const absentCount = totalCount - presentCount;
+  
+  document.getElementById("presentCount").textContent = presentCount;
+  document.getElementById("absentCount").textContent = absentCount;
+  document.getElementById("totalCount").textContent = totalCount;
+}
+
+// Render attendance table
 function renderTable() {
   const section = sectionSelect.value;
   tbody.innerHTML = "";
 
-  students
-    .filter(s => s.section === section)
-    .forEach(student => {
-      const present = attendanceRecords.some(r => r.student_number === student.student_number);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${student.student_number}</td>
-        <td>${student.name}</td>
-        <td>${student.grade_level} - ${student.section}</td>
-        <td class="${present ? "present" : "absent"}">${present ? "Present" : "Absent"}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+  let filteredStudents = students;
+  if (section) {
+    filteredStudents = students.filter(s => s.section === section);
+  }
+
+  if (filteredStudents.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No students found</td></tr>';
+    return;
+  }
+
+  filteredStudents.forEach(student => {
+    const present = attendanceRecords.some(r => r.student_number === student.student_number);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${student.student_number}</td>
+      <td>${student.name}</td>
+      <td>${student.grade_level} - ${student.section}</td>
+      <td><span class="status-badge ${present ? "status-present" : "status-absent"}">${present ? "✓ Present" : "✗ Absent"}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  updateStats();
 }
 
 // Handle QR scan
 async function onScanSuccess(decodedText) {
   const student_number = decodedText.trim();
-  if (scanLock[student_number]) return;
+  
+  if (scanLock[student_number]) {
+    return;
+  }
   scanLock[student_number] = true;
 
   try {
@@ -87,25 +120,21 @@ async function onScanSuccess(decodedText) {
       body: JSON.stringify({ student_number })
     });
 
-    const text = await res.text();
-    appendLog("RAW scan response: " + text);
+    const data = await res.json();
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (err) {
-      appendLog("❌ Invalid JSON from scan POST: " + err, "error");
-      alert("❌ Server returned invalid JSON. Check logs below.");
-      return;
+    if (data.success) {
+      showScanStatus(data.message, "success");
+      await loadAttendance();
+    } else {
+      showScanStatus(data.message, "error");
     }
-
-    appendLog("✅ " + (data.message || "No message returned"), "success");
-    await loadAttendance();
   } catch (err) {
-    appendLog("❌ Error saving attendance: " + err, "error");
-    alert("❌ Could not connect to server. Check logs below.");
+    console.error("Error saving attendance:", err);
+    showScanStatus("❌ Connection error", "error");
   } finally {
-    setTimeout(() => { scanLock[student_number] = false; }, 1000);
+    setTimeout(() => { 
+      scanLock[student_number] = false; 
+    }, 2000);
   }
 }
 
@@ -115,8 +144,15 @@ function initScanner() {
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    onScanSuccess
-  );
+    onScanSuccess,
+    (error) => {
+      // Silent error handling for continuous scanning
+    }
+  ).catch(err => {
+    console.error("Camera error:", err);
+    document.getElementById("reader").innerHTML = 
+      '<p style="color: red; padding: 20px;">❌ Unable to access camera. Please grant camera permissions.</p>';
+  });
 }
 
 // Event listeners

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Students</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back-btn">← Back to Dashboard</a>
+    <h1>👥 Manage Students</h1>
+  </div>
+
+  <div class="container">
+    <div class="form-card">
+      <h2>Add New Student</h2>
+      <form id="addStudentForm">
+        <div class="form-group">
+          <label for="student_number">Student Number *</label>
+          <input type="text" id="student_number" required placeholder="e.g., 2024001" />
+        </div>
+
+        <div class="form-group">
+          <label for="name">Full Name *</label>
+          <input type="text" id="name" required placeholder="e.g., John Smith" />
+        </div>
+
+        <div class="form-group">
+          <label for="grade_level">Grade Level *</label>
+          <select id="grade_level" required>
+            <option value="">Select Grade</option>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="section">Section *</label>
+          <select id="section" required>
+            <option value="">Select Section</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Student</button>
+      </form>
+    </div>
+
+    <div class="table-card">
+      <h2>Student List</h2>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Search by name or student number..." />
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Student Number</th>
+              <th>Name</th>
+              <th>Grade Level</th>
+              <th>Section</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Edit Student</h2>
+      <form id="editStudentForm">
+        <input type="hidden" id="edit_student_number" />
+        
+        <div class="form-group">
+          <label for="edit_name">Full Name *</label>
+          <input type="text" id="edit_name" required />
+        </div>
+
+        <div class="form-group">
+          <label for="edit_grade_level">Grade Level *</label>
+          <select id="edit_grade_level" required>
+            <option value="Grade 7">Grade 7</option>
+            <option value="Grade 8">Grade 8</option>
+            <option value="Grade 9">Grade 9</option>
+            <option value="Grade 10">Grade 10</option>
+            <option value="Grade 11">Grade 11</option>
+            <option value="Grade 12">Grade 12</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_section">Section *</label>
+          <select id="edit_section" required>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update Student</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="students-manager.js"></script>
+</body>
+</html>
