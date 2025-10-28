@@ -2,6 +2,29 @@ const dateInput = document.getElementById("date");
 const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
 
+// Add a log container dynamically if not in HTML
+let logDiv = document.getElementById("log");
+if (!logDiv) {
+  logDiv = document.createElement("div");
+  logDiv.id = "log";
+  logDiv.style.background = "#f0f0f0";
+  logDiv.style.padding = "10px";
+  logDiv.style.margin = "10px 0";
+  logDiv.style.maxHeight = "200px";
+  logDiv.style.overflowY = "auto";
+  logDiv.style.fontSize = "12px";
+  logDiv.style.fontFamily = "monospace";
+  document.body.appendChild(logDiv);
+}
+
+function appendLog(message, type = "info") {
+  const p = document.createElement("p");
+  p.textContent = message;
+  p.style.color = type === "error" ? "red" : type === "success" ? "green" : "black";
+  logDiv.appendChild(p);
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
 let students = [];
 let attendanceRecords = [];
 let scanLock = {}; // prevent duplicate scans
@@ -14,10 +37,10 @@ async function loadStudents() {
     const res = await fetch("students.json");
     const data = await res.json();
     students = Object.keys(data).map(id => ({ student_number: id, ...data[id] }));
+    appendLog("✅ Loaded students.json", "success");
     renderTable();
   } catch (err) {
-    console.error("Failed to load students.json:", err);
-    alert("❌ Could not load students.json. Check console logs.");
+    appendLog("❌ Failed to load students.json: " + err, "error");
   }
 }
 
@@ -26,22 +49,20 @@ async function loadAttendance() {
   try {
     const res = await fetch("/api/attendance?date=" + dateInput.value);
     const text = await res.text();
-    console.log("RAW attendance fetch response:", text);
+    appendLog("RAW attendance fetch response: " + text);
 
     let data;
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Invalid JSON from /api/attendance:", err);
-      alert("❌ Server returned invalid JSON for attendance. Check console logs.");
+      appendLog("❌ Invalid JSON from /api/attendance: " + err, "error");
       return;
     }
 
     attendanceRecords = data.records || [];
     renderTable();
   } catch (err) {
-    console.error("Error loading attendance:", err);
-    alert("❌ Could not load attendance. Check console logs.");
+    appendLog("❌ Error loading attendance: " + err, "error");
   }
 }
 
@@ -68,7 +89,7 @@ function renderTable() {
 // Handle QR scan
 async function onScanSuccess(decodedText) {
   const student_number = decodedText.trim();
-  if (scanLock[student_number]) return; // ignore repeated scans
+  if (scanLock[student_number]) return;
   scanLock[student_number] = true;
 
   try {
@@ -79,24 +100,23 @@ async function onScanSuccess(decodedText) {
     });
 
     const text = await res.text();
-    console.log("RAW scan response:", text); // <-- logs everything on frontend
+    appendLog("RAW scan response: " + text);
 
     let data;
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Invalid JSON from scan POST:", err);
-      alert("❌ Server returned invalid JSON. Check console logs.");
+      appendLog("❌ Invalid JSON from scan POST: " + err, "error");
+      alert("❌ Server returned invalid JSON. Check logs below.");
       return;
     }
 
-    alert(data.message || "No message returned");
+    appendLog("✅ " + (data.message || "No message returned"), "success");
     await loadAttendance();
   } catch (err) {
-    console.error("Error saving attendance:", err);
-    alert("❌ Could not connect to server. Check console logs.");
+    appendLog("❌ Error saving attendance: " + err, "error");
+    alert("❌ Could not connect to server. Check logs below.");
   } finally {
-    // unlock after 1 second
     setTimeout(() => { scanLock[student_number] = false; }, 1000);
   }
 }
