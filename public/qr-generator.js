@@ -1,8 +1,3 @@
-// ------------------- Supabase Client -------------------
-const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
-const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); // note: use 'supabase', not 'Supabase'
-
 // ------------------- Local Cache -------------------
 let students = {};
 let qrCodes = {};
@@ -141,4 +136,3 @@ document.getElementById('sectionFilter').addEventListener('change', renderQRCode
 
 // ------------------- Initialize -------------------
 loadStudents();
-  
