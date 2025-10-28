@@ -1,20 +1,54 @@
-// Load students
-async function loadStudents() {
+let students = {}; // local cache of students
+
+// ------------------- Load Students -------------------
+async function loadStudents(filterText = "") {
   try {
     const { data, error } = await supabase.from('students').select('*');
     if (error) throw error;
-    
+
     students = {};
     data.forEach(student => {
       students[student.student_number] = student;
     });
-    renderTable();
+
+    renderTable(filterText);
   } catch (err) {
     alert("Error loading students: " + err.message);
   }
 }
 
-// Add student
+// ------------------- Render Table -------------------
+function renderTable(filterText = "") {
+  const tbody = document.getElementById("studentsTable");
+  tbody.innerHTML = "";
+
+  const filtered = Object.entries(students).filter(([id, student]) => {
+    const searchTerm = filterText.toLowerCase();
+    return id.toLowerCase().includes(searchTerm) || student.name.toLowerCase().includes(searchTerm);
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">No students found</td></tr>';
+    return;
+  }
+
+  filtered.forEach(([id, student]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${id}</td>
+      <td>${student.name}</td>
+      <td>${student.grade_level}</td>
+      <td>${student.section}</td>
+      <td class="action-buttons">
+        <button class="btn-edit" onclick="editStudent('${id}')">✏️ Edit</button>
+        <button class="btn-delete" onclick="deleteStudent('${id}')">🗑️ Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ------------------- Add Student -------------------
 document.getElementById("addStudentForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -38,16 +72,26 @@ document.getElementById("addStudentForm").addEventListener("submit", async (e) =
   }
 });
 
-// Update student
+// ------------------- Edit Student -------------------
+function editStudent(studentNumber) {
+  const student = students[studentNumber];
+  document.getElementById("edit_student_number").value = studentNumber;
+  document.getElementById("edit_name").value = student.name;
+  document.getElementById("edit_grade_level").value = student.grade_level;
+  document.getElementById("edit_section").value = student.section;
+  document.getElementById("editModal").style.display = "block";
+}
+
+// ------------------- Update Student -------------------
 document.getElementById("editStudentForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const studentNumber = document.getElementById("edit_student_number").value;
   const studentData = {
     name: document.getElementById("edit_name").value.trim(),
     grade_level: document.getElementById("edit_grade_level").value,
     section: document.getElementById("edit_section").value
   };
-  const studentNumber = document.getElementById("edit_student_number").value;
 
   try {
     const { data, error } = await supabase
@@ -65,7 +109,7 @@ document.getElementById("editStudentForm").addEventListener("submit", async (e) 
   }
 });
 
-// Delete student
+// ------------------- Delete Student -------------------
 async function deleteStudent(studentNumber) {
   if (!confirm(`Are you sure you want to delete ${students[studentNumber].name}?`)) return;
 
@@ -84,5 +128,20 @@ async function deleteStudent(studentNumber) {
   }
 }
 
-// Initialize
+// ------------------- Search -------------------
+document.getElementById("searchInput").addEventListener("input", (e) => {
+  renderTable(e.target.value);
+});
+
+// ------------------- Modal Controls -------------------
+document.querySelector(".close").addEventListener("click", () => {
+  document.getElementById("editModal").style.display = "none";
+});
+
+window.addEventListener("click", (e) => {
+  const modal = document.getElementById("editModal");
+  if (e.target === modal) modal.style.display = "none";
+});
+
+// ------------------- Initialize -------------------
 loadStudents();
