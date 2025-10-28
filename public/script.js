@@ -15,13 +15,11 @@ async function onScanSuccess(qrCodeMessage) {
       body: JSON.stringify({ student_number: qrCodeMessage }),
     });
 
-    // Parse JSON response
     const data = await res.json();
-
     if (data.success) {
-      showMessage(`✅ ${data.message}`, true);
+      showMessage(data.message, true);
     } else {
-      showMessage(`⚠️ ${data.message}`, false);
+      showMessage(data.message, false);
     }
   } catch (error) {
     console.error(error);
