@@ -1,21 +1,13 @@
 const dateInput = document.getElementById("date");
 const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
+const logDiv = document.getElementById("log");
 
-// Add a log container dynamically if not in HTML
-let logDiv = document.getElementById("log");
-if (!logDiv) {
-  logDiv = document.createElement("div");
-  logDiv.id = "log";
-  logDiv.style.background = "#f0f0f0";
-  logDiv.style.padding = "10px";
-  logDiv.style.margin = "10px 0";
-  logDiv.style.maxHeight = "200px";
-  logDiv.style.overflowY = "auto";
-  logDiv.style.fontSize = "12px";
-  logDiv.style.fontFamily = "monospace";
-  document.body.appendChild(logDiv);
-}
+let students = [];
+let attendanceRecords = [];
+let scanLock = {}; // prevent repeated scans per student
+
+dateInput.value = new Date().toISOString().split("T")[0];
 
 function appendLog(message, type = "info") {
   const p = document.createElement("p");
@@ -24,12 +16,6 @@ function appendLog(message, type = "info") {
   logDiv.appendChild(p);
   logDiv.scrollTop = logDiv.scrollHeight;
 }
-
-let students = [];
-let attendanceRecords = [];
-let scanLock = {}; // prevent duplicate scans
-
-dateInput.value = new Date().toISOString().split("T")[0];
 
 // Load students.json
 async function loadStudents() {
@@ -47,7 +33,8 @@ async function loadStudents() {
 // Load today's attendance
 async function loadAttendance() {
   try {
-    const res = await fetch("/api/attendance?date=" + dateInput.value);
+    const apiUrl = `${window.location.origin}/api/attendance?date=${dateInput.value}`;
+    const res = await fetch(apiUrl);
     const text = await res.text();
     appendLog("RAW attendance fetch response: " + text);
 
@@ -93,7 +80,8 @@ async function onScanSuccess(decodedText) {
   scanLock[student_number] = true;
 
   try {
-    const res = await fetch("/api/attendance", {
+    const apiUrl = `${window.location.origin}/api/attendance`;
+    const res = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ student_number })
