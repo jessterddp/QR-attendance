@@ -5,18 +5,20 @@ const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
 const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ------------------- DOM Elements -------------------
 const dateInput = document.getElementById("date");
 const sectionSelect = document.getElementById("section");
 const tbody = document.getElementById("attendance-body");
 const scanStatus = document.getElementById("scanStatus");
 
+// ------------------- Local State -------------------
 let students = [];
 let attendanceRecords = [];
 let scanLock = {};
 
 dateInput.value = new Date().toISOString().split("T")[0];
 
-// Show scan status
+// ------------------- Show Scan Status -------------------
 function showScanStatus(message, type = "info") {
   scanStatus.textContent = message;
   scanStatus.className = `scan-status ${type}`;
@@ -27,41 +29,38 @@ function showScanStatus(message, type = "info") {
   }, 3000);
 }
 
-// Load students
+// ------------------- Load Students from Supabase -------------------
 async function loadStudents() {
   try {
-    const res = await fetch(`${window.location.origin}/api/students`);
-    const data = await res.json();
-    if (data.success) {
-      students = Object.keys(data.students).map(id => ({ 
-        student_number: id, 
-        ...data.students[id] 
-      }));
-      renderTable();
-    }
+    const { data, error } = await supabase.from('students').select('*');
+    if (error) throw error;
+
+    students = data; // Array of student objects
+    renderTable();
   } catch (err) {
     console.error("Failed to load students:", err);
   }
 }
 
-// Load attendance records
+// ------------------- Load Attendance Records -------------------
 async function loadAttendance() {
   try {
-    const apiUrl = `${window.location.origin}/api/attendance?date=${dateInput.value}`;
-    const res = await fetch(apiUrl);
-    const data = await res.json();
+    const { data, error } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('date', dateInput.value);
 
-    if (data.success) {
-      attendanceRecords = data.records || [];
-      renderTable();
-      updateStats();
-    }
+    if (error) throw error;
+
+    attendanceRecords = data || [];
+    renderTable();
+    updateStats();
   } catch (err) {
     console.error("Error loading attendance:", err);
   }
 }
 
-// Update statistics
+// ------------------- Update Statistics -------------------
 function updateStats() {
   const section = sectionSelect.value;
   const filteredStudents = section 
@@ -80,7 +79,7 @@ function updateStats() {
   document.getElementById("totalCount").textContent = totalCount;
 }
 
-// Render attendance table
+// ------------------- Render Attendance Table -------------------
 function renderTable() {
   const section = sectionSelect.value;
   tbody.innerHTML = "";
@@ -110,51 +109,43 @@ function renderTable() {
   updateStats();
 }
 
-// Handle QR scan
-async function onScanSuccess(decodedText) {
-  const student_number = decodedText.trim();
-  
-  if (scanLock[student_number]) {
-    return;
-  }
+// ------------------- Record Attendance -------------------
+async function recordAttendance(student_number) {
+  if (scanLock[student_number]) return;
   scanLock[student_number] = true;
 
   try {
-    const apiUrl = `${window.location.origin}/api/attendance`;
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ student_number })
-    });
+    // Insert attendance record
+    const { data, error } = await supabase.from('attendance').insert([
+      { student_number, date: dateInput.value }
+    ]);
 
-    const data = await res.json();
+    if (error) throw error;
 
-    if (data.success) {
-      showScanStatus(data.message, "success");
-      await loadAttendance();
-    } else {
-      showScanStatus(data.message, "error");
-    }
+    showScanStatus(`✅ Attendance recorded for ${student_number}`, "success");
+    await loadAttendance();
   } catch (err) {
     console.error("Error saving attendance:", err);
-    showScanStatus("❌ Connection error", "error");
+    showScanStatus("❌ Failed to record attendance", "error");
   } finally {
-    setTimeout(() => { 
-      scanLock[student_number] = false; 
-    }, 2000);
+    setTimeout(() => { scanLock[student_number] = false; }, 2000);
   }
 }
 
-// Initialize QR scanner
+// ------------------- QR Scan Success -------------------
+async function onScanSuccess(decodedText) {
+  const student_number = decodedText.trim();
+  await recordAttendance(student_number);
+}
+
+// ------------------- Initialize QR Scanner -------------------
 function initScanner() {
   const html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     onScanSuccess,
-    (error) => {
-      // Silent error handling for continuous scanning
-    }
+    (error) => { /* ignore scan errors silently */ }
   ).catch(err => {
     console.error("Camera error:", err);
     document.getElementById("reader").innerHTML = 
@@ -162,11 +153,11 @@ function initScanner() {
   });
 }
 
-// Event listeners
+// ------------------- Event Listeners -------------------
 dateInput.addEventListener("change", loadAttendance);
 sectionSelect.addEventListener("change", renderTable);
 
-// Initialize
+// ------------------- Initialize -------------------
 loadStudents().then(() => {
   loadAttendance();
   initScanner();

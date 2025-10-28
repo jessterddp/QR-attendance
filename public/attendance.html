@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Track Attendance</title>
   <link rel="stylesheet" href="style.css" />
+
+  <!-- HTML5 QR code scanner -->
   <script src="https://unpkg.com/html5-qrcode" defer></script>
-    <!-- QRCode library (if needed) -->
+
+  <!-- QRCode library (if you also want QR generation) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
@@ -16,6 +19,7 @@
   </div>
 
   <div class="container">
+    <!-- Controls for date and section -->
     <div class="controls-card">
       <div class="form-group">
         <label for="date">Date:</label>
@@ -35,12 +39,14 @@
       </div>
     </div>
 
+    <!-- QR scanner -->
     <div class="camera-card">
       <h2>📷 Scan QR Code</h2>
       <div id="reader"></div>
       <div id="scanStatus"></div>
     </div>
 
+    <!-- Attendance table -->
     <div class="table-card">
       <h2>Attendance Records</h2>
       <div class="stats">
@@ -71,12 +77,12 @@
         </table>
       </div>
     </div>
-</div>
+  </div>
+
   <!-- Supabase library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.76.1/dist/supabase.min.js"></script>
 
-  <!-- Your custom JS -->
+  <!-- Custom script (module) -->
   <script type="module" src="script.js"></script>
-
 </body>
 </html>
