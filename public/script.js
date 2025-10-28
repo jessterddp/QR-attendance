@@ -17,6 +17,7 @@ async function loadStudents() {
     renderTable();
   } catch (err) {
     console.error("Failed to load students.json:", err);
+    alert("❌ Could not load students.json. Check console logs.");
   }
 }
 
@@ -25,13 +26,14 @@ async function loadAttendance() {
   try {
     const res = await fetch("/api/attendance?date=" + dateInput.value);
     const text = await res.text();
-    console.log("Raw attendance fetch response:", text);
+    console.log("RAW attendance fetch response:", text);
 
     let data;
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Failed to parse JSON:", err);
+      console.error("Invalid JSON from /api/attendance:", err);
+      alert("❌ Server returned invalid JSON for attendance. Check console logs.");
       return;
     }
 
@@ -39,6 +41,7 @@ async function loadAttendance() {
     renderTable();
   } catch (err) {
     console.error("Error loading attendance:", err);
+    alert("❌ Could not load attendance. Check console logs.");
   }
 }
 
@@ -76,13 +79,13 @@ async function onScanSuccess(decodedText) {
     });
 
     const text = await res.text();
-    console.log("RAW response from server:", text);
+    console.log("RAW scan response:", text); // <-- logs everything on frontend
 
     let data;
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Invalid JSON:", err);
+      console.error("Invalid JSON from scan POST:", err);
       alert("❌ Server returned invalid JSON. Check console logs.");
       return;
     }
@@ -90,10 +93,11 @@ async function onScanSuccess(decodedText) {
     alert(data.message || "No message returned");
     await loadAttendance();
   } catch (err) {
-    console.error("Fetch error:", err);
-    alert("❌ Could not connect to server");
+    console.error("Error saving attendance:", err);
+    alert("❌ Could not connect to server. Check console logs.");
   } finally {
-    setTimeout(() => { scanLock[student_number] = false; }, 1000); // unlock after 1 second
+    // unlock after 1 second
+    setTimeout(() => { scanLock[student_number] = false; }, 1000);
   }
 }
 
