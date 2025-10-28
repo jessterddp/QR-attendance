@@ -71,12 +71,21 @@
       </div>
     </div>
 </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.10.2/dist/supabase.min.js"></script>
-    <script>
-        const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
-        const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
-    </script>
+  <!-- QRCode library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Supabase library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.10.2/dist/supabase.min.js"></script>
+
+  <!-- Initialize Supabase -->
+  <script>
+      const SUPABASE_URL = "https://gevrbcacemvqunsztlic.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_f5GQ75baPM__DNpcpMs57g_sneJ6RwP";
+      const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
+  </script>
+
+  <!-- Your custom JS -->
   <script src="script.js" defer></script>
+
 </body>
 </html>
