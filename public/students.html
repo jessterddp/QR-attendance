@@ -32,17 +32,14 @@
         <label for="grade_level">Grade Level *</label>
         <input type="number" id="grade_level" required placeholder="e.g., 7" />
       </div>
+
+      <!-- Section dropdown with addable options -->
       <div class="form-group">
         <label for="section">Section *</label>
-        <select id="section" required>
-          <option value="">Select Section</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-          <option value="D">D</option>
-          <option value="E">E</option>
-        </select>
+        <select id="section" required></select>
+        <input type="text" id="newSectionInput" placeholder="Type new section and press Enter" />
       </div>
+
       <button type="submit" class="btn btn-primary">Add Student</button>
     </form>
   </div>
@@ -87,13 +84,8 @@
       </div>
       <div class="form-group">
         <label for="edit_section">Section *</label>
-        <select id="edit_section" required>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-          <option value="D">D</option>
-          <option value="E">E</option>
-        </select>
+        <select id="edit_section" required></select>
+        <input type="text" id="newEditSectionInput" placeholder="Type new section and press Enter" />
       </div>
       <button type="submit" class="btn btn-primary">Update Student</button>
     </form>
@@ -102,5 +94,66 @@
 
 <!-- Students Manager JS as module -->
 <script type="module" src="students-manager.js"></script>
+
+<!-- Script for persistent custom section list -->
+<script>
+  const defaultSections = ["A", "B", "C", "D", "E"];
+
+  function loadSections() {
+    // Get saved sections or default
+    const saved = JSON.parse(localStorage.getItem("sections")) || defaultSections;
+    return saved;
+  }
+
+  function saveSections(sections) {
+    localStorage.setItem("sections", JSON.stringify(sections));
+  }
+
+  function populateSectionDropdown(select, sections) {
+    select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select or Add Section";
+    select.appendChild(placeholder);
+
+    sections.forEach(sec => {
+      const opt = document.createElement("option");
+      opt.value = sec;
+      opt.textContent = sec;
+      select.appendChild(opt);
+    });
+  }
+
+  function setupDynamicSectionInput(selectId, inputId) {
+    const select = document.getElementById(selectId);
+    const input = document.getElementById(inputId);
+    let sections = loadSections();
+
+    populateSectionDropdown(select, sections);
+
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && input.value.trim() !== "") {
+        e.preventDefault();
+        const newSection = input.value.trim();
+
+        // Check if already exists
+        if (!sections.includes(newSection)) {
+          sections.push(newSection);
+          saveSections(sections);
+          populateSectionDropdown(select, sections);
+        }
+
+        select.value = newSection;
+        input.value = "";
+      }
+    });
+  }
+
+  // Initialize both dropdowns on page load
+  document.addEventListener("DOMContentLoaded", () => {
+    setupDynamicSectionInput("section", "newSectionInput");
+    setupDynamicSectionInput("edit_section", "newEditSectionInput");
+  });
+</script>
 </body>
 </html>
