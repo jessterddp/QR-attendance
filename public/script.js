@@ -112,7 +112,7 @@ function renderTable() {
   updateStats();
 }
 
-// ------------------- Record Attendance -------------------
+// ------------------- Record Attendance (Arrival & Dismissal with Delay) -------------------
 async function recordAttendance(studentNumber) {
   if (scanLock[studentNumber]) return;
   scanLock[studentNumber] = true;
@@ -125,30 +125,72 @@ async function recordAttendance(studentNumber) {
     }
 
     const now = new Date();
-    const date = now.toISOString().split("T")[0];       // YYYY-MM-DD
-    const time = now.toTimeString().split(" ")[0];      // HH:MM:SS
+    const date = now.toISOString().split("T")[0];
+    const time = now.toTimeString().split(" ")[0];
 
-    const { data, error } = await supabase
+    // 🔍 Check if student already scanned today
+    const { data: existingRecord, error: fetchError } = await supabase
       .from("attendance_records")
-      .insert([{
-        student_number: parseInt(student.student_number),
-        student_name: student.name,
-        grade_level: parseInt(student.grade_level),
-        section: student.section,
-        status: "Present",
-        date,
-        time
-      }]);
+      .select("*")
+      .eq("student_number", student.student_number)
+      .eq("date", date)
+      .maybeSingle();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
 
-    showScanStatus(`✅ Attendance recorded for ${student.name}`, "success");
+    if (!existingRecord) {
+      // 🟢 First scan (Arrival)
+      const { error: insertError } = await supabase
+        .from("attendance_records")
+        .insert([{
+          student_number: parseInt(student.student_number),
+          student_name: student.name,
+          grade_level: parseInt(student.grade_level),
+          section: student.section,
+          status: "Present",
+          date,
+          time
+        }]);
+
+      if (insertError) throw insertError;
+      showScanStatus(`✅ Attendance recorded (Arrival) for ${student.name}`, "success");
+
+    } else {
+      // 🔵 Possible dismissal scan
+      const lastScanTime = new Date(`${date}T${existingRecord.time}`);
+      const minutesSinceLastScan = (now - lastScanTime) / 60000; // convert ms → minutes
+
+      // Set minimum time gap before dismissal allowed (e.g., 10 minutes)
+      const DISMISSAL_DELAY_MINUTES = 10;
+
+      if (minutesSinceLastScan < DISMISSAL_DELAY_MINUTES) {
+        showScanStatus(
+          `⚠️ Too soon to dismiss. Try again in ${Math.ceil(DISMISSAL_DELAY_MINUTES - minutesSinceLastScan)} min.`,
+          "warning"
+        );
+      } else if (existingRecord.status === "Dismissed") {
+        showScanStatus(`ℹ️ ${student.name} is already marked dismissed.`, "info");
+      } else {
+        const { error: updateError } = await supabase
+          .from("attendance_records")
+          .update({
+            status: "Dismissed",
+            time: time
+          })
+          .eq("id", existingRecord.id);
+
+        if (updateError) throw updateError;
+        showScanStatus(`👋 Dismissal recorded for ${student.name}`, "success");
+      }
+    }
+
     await loadAttendance();
 
   } catch (err) {
     console.error("Failed to record attendance:", err);
     showScanStatus("❌ Failed to record attendance", "error");
   } finally {
+    // Unlock this student’s scan after 2 seconds to avoid rapid duplicate scans
     setTimeout(() => scanLock[studentNumber] = false, 2000);
   }
 }
