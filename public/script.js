@@ -112,7 +112,7 @@ function renderTable() {
   updateStats();
 }
 
-// ------------------- Record Attendance (Arrival & Dismissal with Delay) -------------------
+// ------------------ Record Attendance (Arrival & Dismissal with Delay) ------------------
 async function recordAttendance(studentNumber) {
   if (scanLock[studentNumber]) return;
   scanLock[studentNumber] = true;
